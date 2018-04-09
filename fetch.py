@@ -59,8 +59,10 @@ def init():
         pass
 
 # 进入指定search_text的高级检索结果页。首选从检索历史中相应历史结果直接进入
+#  返回值为wos检索结果条数，数值型
 def adv_search_and_go(search_text):
     global driver
+    rs_count=0
     wos_his_label=check_searched(search_text)
     if wos_his_label=='':
         # wos搜索历史中没有，去高级搜索
@@ -76,13 +78,18 @@ def adv_search_and_go(search_text):
         e=ele[i].find_elements_by_class_name("historySetNum")
         if len(e)==1 and e[0].text==wos_his_label:
             idx=i
-            dmesg('搜索结果中找到该条目，排第 %s 条' %i)
+            dmesg('搜索结果中找到该条目，排第 %s 条' %(i+1))
     if idx == -1:
         exit('ERROR *** wos搜索结果中没找到该项 %s' %wos_his_label)
+
     e=ele[idx].find_element_by_class_name("historyResults")
+    rs_text=e.text
+    rs_count=int(rs_text.replace(',',''))
     e=e.find_element_by_tag_name("a")
+    dmesg('wos检索历史显示有 %s 条结果'%rs_count)
     dmesg('点击结果条目，进入结果页')
     e.click()
+    return rs_count
 
 
 
@@ -101,7 +108,7 @@ def goto_wos_search_history():
         url=driver.current_url.encode('utf-8')
         #u[u.find('/',10):u.find('?')]
         dmesg('当前非检索历史页面，尝试切换数据库')
-        dmesg(url)
+        print(url)
         dmesg('展开数据库下拉列表')
         ele=driver.find_element_by_xpath("//div[@class='dbselectdiv']//span[@class='select2-selection__arrow']")
         ele.click()
@@ -117,6 +124,7 @@ def goto_wos_search_history():
 def check_searched(search_text):
     global driver
     goto_wos_search_history()
+    sleep(1)
     assert '.com/WOS_CombineSearches_input.do?' in driver.current_url
     # 遍历历史条目，寻找与search_text一致项,索引号存储于 idx
     idx = -1
@@ -217,7 +225,7 @@ def search(search_text):
 
 
 # 按 start, bat_size 执行一次保存；需要保证当前为检索结果页面
-def cral(start,batch_size):
+def crawl(start,batch_size,label):
     global driver
     #点击按钮，打开发送文件html层；防止页面不完整而多次重试
     times=0
@@ -226,7 +234,7 @@ def cral(start,batch_size):
         ele=driver.find_elements_by_xpath("//div[@class='page-options-inner']//span[@class='select2-selection__arrow']")
         if len(ele)==1:
             break
-        if times > config.cral_page_reload_retry:
+        if times > config.crawl_page_reload_retry:
             exit('summary.do页面已超过重试次数限制，请手工检查是否可以正常访问')
         e=driver.find_elements_by_xpath("//form[@id='summary_navigation']//a[not(contains(@class,'Disabled'))]")
         if len(e)>=1:
@@ -241,6 +249,7 @@ def cral(start,batch_size):
     sleep(0.3)
 
     #点选 “保存为其他文件格式” u'\u4fdd\u5b58\u4e3a\u5176\u4ed6\u6587\u4ef6\u683c\u5f0f'
+    dmesg('点选 “保存为其他文件格式”')
     ele=driver.find_elements_by_xpath("//span[contains(@class,'select2-container')]//ul[@id='select2-saveToMenu-results']//li")
     et=[it.text for it in ele]
     if u'\u4fdd\u5b58\u4e3a\u5176\u4ed6\u6587\u4ef6\u683c\u5f0f' not in et:
@@ -249,7 +258,7 @@ def cral(start,batch_size):
     ele[k].click()
 
 
-    # 点选记录范围并输入
+    dmesg('点选记录范围并输入')
     ele=driver.find_element_by_id("numberOfRecordsRange")
     ele.click()
     sleep(0.3)
@@ -264,7 +273,7 @@ def cral(start,batch_size):
     ele.send_keys('%s'%(start+batch_size-1))
     sleep(0.3)
 
-    # 更改记录内容下拉选项
+    dmesg('更改记录内容下拉选项')
     ele=driver.find_element_by_class_name("quickoutput-content")
     e=ele.find_element_by_class_name("select2-selection__arrow")
     e.click()
@@ -275,6 +284,7 @@ def cral(start,batch_size):
     e[3].click()
     sleep(0.3)
 
+    dmesg('更改文件格式下拉选项')
     # 更改文件格式下拉选项
     ## 找三角图标，点击展开下拉项
     ele=driver.find_elements_by_class_name("quick-output-detail")
@@ -288,28 +298,109 @@ def cral(start,batch_size):
     sleep(0.3)
 
 
+    snap=os.listdir(config.file_save_dir)
+    dmesg('扫描下载目录，缓存文件列表，计 %s 个'%len(snap))
+
     # 点下载按钮、然后点关闭html层
     ele=driver.find_elements_by_class_name("quickoutput-action")
     e=ele[0].find_element_by_tag_name('button')
     e.click()
-    sleep(0.3)
+    dmesg('点下载按钮、等待文件下载完成')
+    #sleep(0.3)
 
+    filename='%s_%s.txt'%(label,start)
+    rtn=wait_new_file(config.file_save_dir,snap,filename)
+    dmesg('等候下载wait_new_file()完成状态： %s '%rtn)
+
+    dmesg('点“取消”按钮关闭弹出层，并翻页')
     ele=driver.find_elements_by_class_name("quickoutput-cancel-action")
     ele[0].click()
     sleep(0.3)
-
-
-    #翻页
     ele=driver.find_elements_by_class_name("paginationNext")
     ele[0].click()
     sleep(0.3)
 
+    #返回下载成功与否的状态，以wait_new_file()返回值为准
+    return rtn
 
 
-def wait_for_file():
-    pass
-    file_name='download_file_name.txt'
-    return file_name
+
+# 扫描目录中，发现新增文件，下载完成后，改名为storage_name
+def wait_new_file(dir,snap,storage_name):
+    times=0
+    download_max_wait=10
+    while True:
+        files=os.listdir(dir)
+        new=[file for file in files if file not in snap]
+        #firefox 正在下载的文件，文件名加 .part，据此识别新文件正在下载中
+        f1_last_size=0
+        f2_last_size=0
+        download_zombie=0
+        if len(new)==1 and new[0][:9]=='savedrecs' and new[0][-4:]=='.txt':
+            dmesg('发现预期新文件并改名归档：%s -> %s'%(new[0],storage_name))
+            os.rename('%s/%s'%(config.file_save_dir,new[0]) , '%s/%s'%(config.file_save_dir,storage_name) )
+            return True
+        elif len(new)==2 and (new[0][-5:]=='.part' or new[1][-5:]=='.part') and (new[0] in new[1] or new[1] in new[0]):
+            new.sort()
+            f1=new[0]
+            f2=new[1]
+            f1_path='%s/%s'%(config.file_save_dir,new[0])
+            f2_path='%s/%s'%(config.file_save_dir,new[1])
+            try:
+                f1_size=os.path.getsize(f1_path)
+                f2_size=os.path.getsize(f2_path)
+            except OSError,e:
+                dmesg('临时文件读取失败，可能已下载完成')
+            if download_zombie > config.crawl_page_reload_retry:
+                dmesg('**WARNING** 下载进度僵死过多次数，失败。 %s 次'%download_zombie)
+                return False
+            elif f1_size==f1_last_size and f2_size==f2_last_size:
+                download_zombie+=1
+                dmesg('下载进度僵死中，第 %s 次'%download_zombie)
+            elif f1_size>f1_last_size or f2_size>f2_last_size:
+                dmesg('下载中...   %s: %s     %s: %10d'%(f1,f1_size,f2,f2_size))
+                sleep(1)
+            else:
+                dmesg('发现正在下载的文件：')
+                dmesg('        %s:  %s Bytes'%(f1,f1_size))
+                dmesg('        %s:  %s Bytes'%(f2,f2_size))
+            f1_last_size=f1_size
+            f2_last_size=f2_size
+        elif len(new)==2 or len(new)==1:
+            dmesg('**WARNING** 发现新文件，但文件名非预期，未做任何处理 %s'%new)
+            return False
+        elif times >= config.crawl_page_reload_retry:
+            dmesg('第 %s 次扫描未发现新文件，已达最大重试次数'%times)
+            return False
+        else:
+            times+=1
+            dmesg('第 %s 次扫描未发现新文件，3s后重试'%times)
+            sleep(3)
+
+
+# 监测文件直到其大小不再增长
+#   看着挺好，但没用了，因为firefox下载中的文件带.part后续，完成后再改名
+def wait_for_finish_down(file_full_path,warning_size=1024*1024):
+    last_size=0
+    stable_times=0
+    sys.stdout.write('        ')
+    while True:
+        sleep(1)
+        size=os.path.getsize(file_full_path)
+        if size > last_size:
+            stable_times=0
+            last_size=size
+            sys.stdout.write('+')
+        else:
+            stable_times+=1
+            if stable_times >= 5:
+                sys.stdout.write('  finished')
+                break
+            else:
+                pass
+                sys.stdout.write('_')
+    print ''
+    return size
 
 
 
@@ -320,21 +411,32 @@ def write_to_log(task_label,start,batch_size,file_name):
 
 
 
+def run():
+    for i in range(len(config.sch)):
+        label=config.sch[i]['label']
+        search_text=config.sch[i]['search_text']
+        batch_size=config.file_save_batch_size
+        dmesg('\n==== 开始处理第 %s 批检索 [%s] ==== '%(i+1,label))
+        dmesg(search_text)
+        rs_count=adv_search_and_go(search_text)
+        if rs_count >= 1000000:
+            print '*** [注意] 检索结果超过1000000条，超出部分可能无法批量下载 ***'
+        for pos in range(1,rs_count, batch_size):
+            filename='%s_%s.txt'%(label,pos)
+            if os.path.isfile('%s/%s'%(config.file_save_dir,filename)):
+                dmesg('文件 %s 已存在，不再重复下载'%filename)
+            else:
+                dmesg('本次下载范围 [%s,+%s] '%(pos,batch_size))
+                snap=os.listdir(config.file_save_dir)
+                for i in range(1,config.crawl_page_reload_retry+1):
+                    status=crawl(pos,batch_size,label)
+                    if status:
+                        break
+                    else:
+                        dmesg('下载失败，重试，第 %s 次'%i)
+
+
+
 if __name__ == '__main__':
     init()
-    search_text='PY=2017 AND (WC=ONCOLOGY OR WC=CHEMISTRY MULTIDISCIPLINARY OR WC=BIOCHEMISTRY)'
-    adv_search_and_go(search_text)
-
-    cral(101,50)
-    sleep(10)
-    file_name=wait_for_file()
-    #write_to_log(task_label,start,batch_size,file_name)
-    cral(151,50)
-    sleep(10)
-    file_name=wait_for_file()
-    cral(201,50)
-    sleep(10)
-
-
-
-
+    run()

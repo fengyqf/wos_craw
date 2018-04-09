@@ -8,7 +8,17 @@ wos_username='name@domain.com'
 wos_password='password'
 
 browser_driver_command_executor='http://192.168.0.105:4444/wd/hub'
-#browser_profile_dir=r'F:\tempdown\wos\d59szdfe.default-1521437354332'
 browser_profile_dir='/cygdrive/f/tempdown/wos/d59szdfe.default-1521437354332'
+file_save_dir='/cygdrive/f/tempdown/wos/save'
+file_save_batch_size=500
 
-cral_page_reload_retry=5
+crawl_page_reload_retry=5
+
+sch=[]
+sch.append({'label':'p1','search_text':
+    'PY=2017 AND (WC=CHEMISTRY MULTIDISCIPLINARY OR WC=BIOCHEMISTRY)'
+    })
+sch.append({'label':'p1','search_text':
+    'PY=2016 AND (WC=CHEMISTRY MULTIDISCIPLINARY OR WC=BIOCHEMISTRY)'
+    })
+
