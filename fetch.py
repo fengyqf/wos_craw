@@ -454,7 +454,11 @@ def run():
                 dmesg('本次下载范围 [%s,+%s] '%(pos,batch_size))
                 snap=os.listdir(config.file_save_dir)
                 for i in range(1,config.crawl_page_reload_retry+1):
-                    status=crawl(pos,batch_size,label)
+                    try:
+                        status=crawl(pos,batch_size,label)
+                    except:
+                        dmesg('crawl(..)处理失败')
+                        status=False
                     if status:
                         break
                     else:
