@@ -35,7 +35,18 @@ def init():
     dmesg('starting browser')
     driver = webdriver.Remote(command_executor=command_executor,desired_capabilities=DesiredCapabilities.FIREFOX,browser_profile=profile)
     dmesg('打开 wos 页面，apps子域首页')
-    driver.get('http://apps.webofknowledge.com/')
+    try:
+        driver.get('http://apps.webofknowledge.com/')
+    except:
+        dmesg('打开失败，10s 后重试...')
+        sleep(10)
+        try:
+            driver.get('http://apps.webofknowledge.com/')
+        except:
+            dmesg('打开失败，10s 后重试...')
+            sleep(10)
+            driver.get('http://apps.webofknowledge.com/')
+
     if 'login.webofknowledge.com/error/Error' in driver.current_url:
         dmesg('login status Error, trying re-login')
         ele=driver.find_element_by_name('username')
@@ -246,7 +257,7 @@ def crawl(start,batch_size,label):
             driver.refresh()
             sleep(1)
     ele[0].click()
-    sleep(0.3)
+    sleep(1)
 
     #点选 “保存为其他文件格式” u'\u4fdd\u5b58\u4e3a\u5176\u4ed6\u6587\u4ef6\u683c\u5f0f'
     dmesg('点选 “保存为其他文件格式”')
@@ -256,33 +267,33 @@ def crawl(start,batch_size,label):
         exit('找不到“保存为其他文件格式”')
     k=et.index(u'\u4fdd\u5b58\u4e3a\u5176\u4ed6\u6587\u4ef6\u683c\u5f0f')
     ele[k].click()
-
+    sleep(1)
 
     dmesg('点选记录范围并输入')
     ele=driver.find_element_by_id("numberOfRecordsRange")
     ele.click()
-    sleep(0.3)
+    sleep(1)
 
     ele=driver.find_element_by_id("markFrom")
     ele.clear()
     ele.send_keys('%s'%start)
-    sleep(0.3)
+    sleep(1)
 
     ele=driver.find_element_by_id("markTo")
     ele.clear()
     ele.send_keys('%s'%(start+batch_size-1))
-    sleep(0.3)
+    sleep(1)
 
     dmesg('更改记录内容下拉选项')
     ele=driver.find_element_by_class_name("quickoutput-content")
     e=ele.find_element_by_class_name("select2-selection__arrow")
     e.click()
-    sleep(0.3)
+    sleep(1)
 
     ele=driver.find_elements_by_id("select2-bib_fields-results")
     e=ele[0].find_elements_by_tag_name('li')
     e[3].click()
-    sleep(0.3)
+    sleep(1)
 
     dmesg('更改文件格式下拉选项')
     # 更改文件格式下拉选项
@@ -290,12 +301,12 @@ def crawl(start,batch_size,label):
     ele=driver.find_elements_by_class_name("quick-output-detail")
     e=ele[0].find_elements_by_class_name('select2-selection__arrow')
     e[0].click()
-    sleep(0.3)
+    sleep(1)
 
     ele=driver.find_elements_by_id("select2-saveOptions-results")
     e=ele[0].find_elements_by_tag_name('li')
     e[6].click()
-    sleep(0.3)
+    sleep(1)
 
 
     snap=os.listdir(config.file_save_dir)
@@ -315,10 +326,10 @@ def crawl(start,batch_size,label):
     dmesg('点“取消”按钮关闭弹出层，并翻页')
     ele=driver.find_elements_by_class_name("quickoutput-cancel-action")
     ele[0].click()
-    sleep(0.3)
+    sleep(1)
     ele=driver.find_elements_by_class_name("paginationNext")
     ele[0].click()
-    sleep(0.3)
+    sleep(1)
 
     #返回下载成功与否的状态，以wait_new_file()返回值为准
     return rtn
