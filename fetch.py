@@ -434,8 +434,14 @@ def run():
         dmesg('\n==== 开始处理第 %s 批检索 [%s] ==== '%(i+1,label))
         dmesg(search_text)
         rs_count=adv_search_and_go(search_text)
-        if rs_count >= 1000000:
-            print '*** [注意] 检索结果超过1000000条，超出部分可能无法批量下载 ***'
+        if rs_count >= 100000:
+            print '\n\n*********************************************'
+            print '*** [注意] 检索结果超过100000条，超出部分将无法下载 ***'
+            print '*** 本项检索条件已被忽略，请修改规则后再运行脚本 ***'
+            print '第 %s 条检索条件，其label为 %s '%(i+1,config.sch[i]['label'])
+            print '*********************************************\n\n'
+            print ''
+            continue
         for pos in range(1,rs_count, batch_size):
             filename='%s_%s.txt'%(label,pos)
             if os.path.isfile('%s/%s'%(config.file_save_dir,filename)):
