@@ -178,10 +178,14 @@ def adv_search(search_text):
     ele=driver.find_element_by_xpath("//ul[@id='select2-databases-results'][@class='select2-results__options']/li[contains(text(),'Web of Science')]")
     ele.click()
     sleep(0.3)
-    dmesg('点tab上高级检索')
-    ele=driver.find_element_by_xpath("//ul[@class='searchtype-nav']//a[contains(@href,'WOS_AdvancedSearch_input.do?')]")
-    ele.click()
-    sleep(1)
+
+    if '/WOS_AdvancedSearch_input.do?product=WOS&' in driver.current_url:
+        dmesg('当前即是wos核心合集库的高级检索')
+    else:
+        dmesg('点tab上高级检索')
+        ele=driver.find_element_by_xpath("//ul[@class='searchtype-nav']//a[contains(@href,'WOS_AdvancedSearch_input.do?')]")
+        ele.click()
+        sleep(1)
     dmesg('高级检索页面输入条件:\n%s'%search_text)
     ele=driver.find_element_by_xpath("//form[@id='WOS_AdvancedSearch_input_form']//div[@class='AdvSearchBox']//textarea[@id='value(input1)']")
     ele.clear()
