@@ -340,13 +340,13 @@ def crawl(start,batch_size,label):
 def wait_new_file(dir,snap,storage_name):
     times=0
     download_max_wait=10
+    f1_last_size=0
+    f2_last_size=0
+    download_zombie=0
     while True:
         files=os.listdir(dir)
         new=[file for file in files if file not in snap]
         #firefox 正在下载的文件，文件名加 .part，据此识别新文件正在下载中
-        f1_last_size=0
-        f2_last_size=0
-        download_zombie=0
         if len(new)==1 and new[0][:9]=='savedrecs' and new[0][-4:]=='.txt':
             dmesg('发现预期新文件并改名归档：%s -> %s'%(new[0],storage_name))
             os.rename('%s/%s'%(config.file_save_dir,new[0]) , '%s/%s'%(config.file_save_dir,storage_name) )
@@ -362,12 +362,15 @@ def wait_new_file(dir,snap,storage_name):
                 f2_size=os.path.getsize(f2_path)
             except OSError,e:
                 dmesg('临时文件读取失败，可能已下载完成')
+                sleep(1)
+                continue
             if download_zombie > config.crawl_page_reload_retry:
                 dmesg('**WARNING** 下载进度僵死过多次数，失败。 %s 次'%download_zombie)
                 return False
             elif f1_size==f1_last_size and f2_size==f2_last_size:
                 download_zombie+=1
                 dmesg('下载进度僵死中，第 %s 次'%download_zombie)
+                sleep(1)
             elif f1_size>f1_last_size or f2_size>f2_last_size:
                 dmesg('下载中...   %s: %s     %s: %10d'%(f1,f1_size,f2,f2_size))
                 sleep(1)
@@ -375,6 +378,7 @@ def wait_new_file(dir,snap,storage_name):
                 dmesg('发现正在下载的文件：')
                 dmesg('        %s:  %s Bytes'%(f1,f1_size))
                 dmesg('        %s:  %s Bytes'%(f2,f2_size))
+                sleep(1)
             f1_last_size=f1_size
             f2_last_size=f2_size
         elif len(new)==2 or len(new)==1:
