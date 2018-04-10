@@ -91,7 +91,8 @@ def adv_search_and_go(search_text):
             idx=i
             dmesg('搜索结果中找到该条目，排第 %s 条' %(i+1))
     if idx == -1:
-        exit('ERROR *** wos搜索结果中没找到该项 %s' %wos_his_label)
+        dmesg('ERROR *** wos搜索结果中没找到该项 %s' %wos_his_label)
+        return idx
 
     e=ele[idx].find_element_by_class_name("historyResults")
     rs_text=e.text
@@ -239,8 +240,8 @@ def search(search_text):
 
 
 
-# 按 start, bat_size 执行一次保存；需要保证当前为检索结果页面
-def crawl(start,batch_size,label):
+# 按 start, end 执行一次保存；需要保证当前为检索结果页面
+def crawl(start,end,label):
     global driver
     #点击按钮，打开发送文件html层；防止页面不完整而多次重试
     times=0
@@ -285,7 +286,7 @@ def crawl(start,batch_size,label):
 
     ele=driver.find_element_by_id("markTo")
     ele.clear()
-    ele.send_keys('%s'%(start+batch_size-1))
+    ele.send_keys('%s'%end)
     sleep(1)
 
     dmesg('更改记录内容下拉选项')
@@ -446,16 +447,24 @@ def run():
             print '*********************************************\n\n'
             print ''
             continue
+        elif rs_count == -1:
+            print '\n\n*********************************************'
+            print '*** 未找到该检索项，跳过处理 ***'
+            print '*** ，请检查该检索项配置，是否有前后空格 ***'
+            print '*********************************************\n\n'
+            print ''
+            continue
         for pos in range(1,rs_count, batch_size):
             filename='%s_%s.txt'%(label,pos)
             if os.path.isfile('%s/%s'%(config.file_save_dir,filename)):
                 dmesg('文件 %s 已存在，不再重复下载'%filename)
             else:
-                dmesg('本次下载范围 [%s,+%s] '%(pos,batch_size))
+                pos_to=min(pos+batch_size-1,rs_count)
+                dmesg('本次下载范围 [%s,%s] '%(pos,pos_to))
                 snap=os.listdir(config.file_save_dir)
                 for i in range(1,config.crawl_page_reload_retry+1):
                     try:
-                        status=crawl(pos,batch_size,label)
+                        status=crawl(pos,pos_to,label)
                     except:
                         dmesg('crawl(..)处理失败')
                         status=False
