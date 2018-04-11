@@ -31,7 +31,6 @@ def init():
     global driver
     dmesg('loading browser profile')
     profile=FirefoxProfile(profile_directory=profile_dir)
-    #profile=base64.b64encode(profile)
     dmesg('starting browser')
     driver = webdriver.Remote(command_executor=command_executor,desired_capabilities=DesiredCapabilities.FIREFOX,browser_profile=profile)
     dmesg('打开 wos 页面，apps子域首页')
@@ -121,7 +120,6 @@ def goto_wos_search_history():
     sleep(1)
     if '.com/WOS_CombineSearches_input.do?' not in driver.current_url:
         url=driver.current_url.encode('utf-8')
-        #u[u.find('/',10):u.find('?')]
         dmesg('当前非检索历史页面，尝试切换数据库')
         print(url)
         dmesg('展开数据库下拉列表')
@@ -158,10 +156,7 @@ def check_searched(search_text):
             break
     if idx == -1:
         dmesg('检索历史中没有本项检索式，需要转去高级搜索一次再回来')
-        # TODO
     else:
-        #点击结果链接进入结果页
-        #ele[idx].find_element_by_class_name('historyResults')
         pass
     return wos_his_label
 
@@ -461,14 +456,12 @@ def run():
             print '*** 未找到该检索项，跳过处理 ***'
             print '*** ，请检查该检索项配置，是否有前后空格 ***'
             print '*********************************************\n\n'
-            print ''
             continue
         elif rs_count == False:
             print '\n\n*********************************************'
             print '*** 检索结果失败，adv_search_and_go(...) 返回 False ***'
             print '*** 将跳过处理本项检索条件：第  %s 条，其label为 %s ***'%(i+1,config.sch[i]['label'])
             print '*********************************************\n\n'
-            print ''
             continue
         crawl_fail_batchs=0     #连续抓取失败的批次数
         for pos in range(1,rs_count, batch_size):
