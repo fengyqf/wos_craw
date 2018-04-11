@@ -385,6 +385,7 @@ def wait_new_file(dir,snap,storage_name):
                 dmesg('下载进度僵死中，第 %s 次'%download_zombie)
                 sleep(1)
             elif f1_size>f1_last_size or f2_size>f2_last_size:
+                download_zombie=0
                 dmesg('下载中...   %s: %s     %s: %10d'%(f1,f1_size,f2,f2_size))
                 sleep(1)
             else:
