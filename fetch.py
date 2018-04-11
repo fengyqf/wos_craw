@@ -80,7 +80,8 @@ def adv_search_and_go(search_text):
         adv_search(search_text)
     dmesg('再次检查检索历史查询')
     wos_his_label=check_searched(search_text)
-    goto_wos_search_history()
+    if goto_wos_search_history() ==False:
+        return False
     assert '.com/WOS_CombineSearches_input.do?' in driver.current_url
 
     ele=driver.find_elements_by_xpath("//form[@name='WOS_CombineSearches_input_form']//tbody/tr[@id]")
@@ -109,9 +110,11 @@ def goto_wos_search_history():
     global driver
     ele=driver.find_elements_by_xpath("//div[@id='skip-to-navigation']//a[contains(@href,'_CombineSearches_input.do')]")
     if len(ele)==0:
-        exit('无法在主导航栏中找到“检索历史”: href contains(_CombineSearches_input.do)')
+        dmesg('无法在主导航栏中找到“检索历史”: href contains(_CombineSearches_input.do)')
+        return False
     elif len(ele)>1:
-        exit('在主导航栏中找到多个“检索历史”项: href contains(_CombineSearches_input.do)')
+        dmesg('在主导航栏中找到多个“检索历史”项: href contains(_CombineSearches_input.do)')
+        return False
     else:
         pass
     ele[0].click()
@@ -130,12 +133,14 @@ def goto_wos_search_history():
         ele.click()
         sleep(0.3)
         dmesg('进入wos核心合集检索历史页')
+    return True
 
 
 #检查搜索历史中是否有search_text，返回wos检索式序列，形式为 # 2
 def check_searched(search_text):
     global driver
-    goto_wos_search_history()
+    if goto_wos_search_history()==False:
+        return False
     sleep(1)
     assert '.com/WOS_CombineSearches_input.do?' in driver.current_url
     # 遍历历史条目，寻找与search_text一致项,索引号存储于 idx
@@ -166,6 +171,7 @@ def check_searched(search_text):
 
 def adv_search(search_text):
     global driver
+    sleep(1)
     dmesg('返回首页')
     ele=driver.find_element_by_xpath("//div[@class='logoBar']//a[contains(@href,'/home.do?')]")
     ele.click()
@@ -251,7 +257,8 @@ def crawl(start,end,label):
         if len(ele)==1:
             break
         if times > config.crawl_page_reload_retry:
-            exit('summary.do页面已超过重试次数限制，请手工检查是否可以正常访问')
+            dmesg('summary.do页面已超过重试次数限制，请手工检查是否可以正常访问')
+            return False
         e=driver.find_elements_by_xpath("//form[@id='summary_navigation']//a[not(contains(@class,'Disabled'))]")
         if len(e)>=1:
             dmesg('summary.do页面加载不完整，第 %s 次，尝试翻页'%times)
@@ -269,7 +276,8 @@ def crawl(start,end,label):
     ele=driver.find_elements_by_xpath("//span[contains(@class,'select2-container')]//ul[@id='select2-saveToMenu-results']//li")
     et=[it.text for it in ele]
     if u'\u4fdd\u5b58\u4e3a\u5176\u4ed6\u6587\u4ef6\u683c\u5f0f' not in et:
-        exit('找不到“保存为其他文件格式”')
+        dmesg('找不到“保存为其他文件格式”')
+        return False
     k=et.index(u'\u4fdd\u5b58\u4e3a\u5176\u4ed6\u6587\u4ef6\u683c\u5f0f')
     ele[k].click()
     sleep(1)
@@ -454,7 +462,18 @@ def run():
             print '*********************************************\n\n'
             print ''
             continue
+        elif rs_count == False:
+            print '\n\n*********************************************'
+            print '*** 检索结果失败，adv_search_and_go(...) 返回 False ***'
+            print '*** 将跳过处理本项检索条件：第  %s 条，其label为 %s ***'%(i+1,config.sch[i]['label'])
+            print '*********************************************\n\n'
+            print ''
+            continue
+        crawl_fail_batchs=0     #连续抓取失败的批次数
         for pos in range(1,rs_count, batch_size):
+            if crawl_fail_batchs > config.crawl_fail_retry_limit:
+                dmesg('连续抓取失败的批次数达到限制，将跳过，并进入下一组检索条件')
+                break
             filename='%s_%s.txt'%(label,pos)
             if os.path.isfile('%s/%s'%(config.file_save_dir,filename)):
                 dmesg('文件 %s 已存在，不再重复下载'%filename)
@@ -472,6 +491,7 @@ def run():
                         break
                     else:
                         dmesg('下载失败，重试，第 %s 次'%i)
+                    crawl_fail_batchs += int(status)
 
 
 
