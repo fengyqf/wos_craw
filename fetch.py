@@ -12,6 +12,29 @@ from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 
 import config
 
+'''
+1. 运行环境：
+  - a. 远程selenium 服务器，其地址为 browser_driver_command_executor 变量；其profiles 为 browser_profile_dir变量
+  - b. selenium 服务器 只支持firefox，因为要使用 browser_profile；如不使用该项，应该也可以支持其他浏览器
+  - c. 客户端（脚本运行机器）需要监测下载进度，所以把客户端的本地目录，映射为服务器上firefox下载目录，
+        （windows共享、虚拟机共享等都可以）
+  - d. 手工将服务器端的firefox下载地址设置成上述地址、text文件不经询问直接保存到该目录，
+  - e. 然后将其 profiles 目录复制到客户端上的browser_profile_dir目录，供firefox启动时加载。
+        （selemium服务器端浏览器默认不加载任何配置项，相当于新装firefox）
+  - f. 经过cygwin下通过测试，可正常运行. 服务端 windows 7, firefox 59, jdk8.161
+  - g. 脚本运行过程中，通常不要点击服务端的firefox，以避免DOM变更而导致脚本出错
+
+2. 特性
+  - a. config.py 中设置 sch 变量，逐一设置每个wos检索项；
+        每项要设置一个惟一的label，及wos高级检索条件search_text；
+        每个检索条件，其结果应该控制 在10万条以内（wos限制），超过则直接忽略下载
+  - b. 默认每批下载 file_save_batch_size 条
+  - c. 下载后，txt文件将被自动改名，下载文件自动改名为 {label}_{起始条数}.txt
+  - d. 下载时会检查是否有对应的.txt文件，如果已有，则自动跳过不再下载。因此label要惟一，不能重复
+  - e. 一次执行可能会有漏掉下载的部分（遇异常而跳过），只需要简单的再次执行即可，直到全部下载完成为止
+        可以将全部完成的sch项注释掉（脚本每次执行都要检查所有sch项的抓取进度）
+  - f. 如果怀疑某些.txt文件不完整，将其删除，再跑一遍脚本即可。
+'''
 
 def dmesg(m):
     global dbg
