@@ -480,21 +480,21 @@ def run():
             filename='%s_%s.txt'%(label,pos)
             if os.path.isfile('%s/%s'%(config.file_save_dir,filename)):
                 dmesg('文件 %s 已存在，不再重复下载'%filename)
-            else:
-                pos_to=min(pos+batch_size-1,rs_count)
-                dmesg('本次下载范围 [%s,%s] '%(pos,pos_to))
-                snap=os.listdir(config.file_save_dir)
-                for i in range(1,config.crawl_page_reload_retry+1):
-                    try:
-                        status=crawl(pos,pos_to,label)
-                    except:
-                        dmesg('crawl(..)处理失败')
-                        status=False
-                    if status:
-                        break
-                    else:
-                        dmesg('下载失败，重试，第 %s 次'%i)
-                    crawl_fail_batchs += int(status)
+                continue
+            pos_to=min(pos+batch_size-1,rs_count)
+            dmesg('处理到 %s 的 %.2f%%， 导出范围 [%s,%s] '%(label,100.0*pos/rs_count,pos,pos_to))
+            for i in range(1,config.crawl_page_reload_retry+1):
+                try:
+                    status=crawl(pos,pos_to,label)
+                except:
+                    dmesg('crawl(..)处理失败')
+                    status=False
+                if status:
+                    crawl_fail_batchs=0
+                    break
+                else:
+                    dmesg('下载失败，重试，第 %s 次'%i)
+            crawl_fail_batchs += int(status)
 
 
 
