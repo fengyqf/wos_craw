@@ -140,7 +140,13 @@ def check_searched(search_text):
     if goto_wos_search_history()==False:
         return False
     sleep(1)
-    assert '.com/WOS_CombineSearches_input.do?' in driver.current_url
+    if not '.com/WOS_CombineSearches_input.do?' in driver.current_url:
+        dmesg('当前不是搜索结果页 WOS_CombineSearches_input.do ， retry again')
+        if goto_wos_search_history()==False:
+            dmesg('retry failed')
+            return False
+        sleep(1)
+
     # 遍历历史条目，寻找与search_text一致项,索引号存储于 idx
     idx = -1
     wos_his_label=''
