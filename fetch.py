@@ -34,6 +34,7 @@ import config
   - e. 一次执行可能会有漏掉下载的部分（遇异常而跳过），只需要简单的再次执行即可，直到全部下载完成为止
         可以将全部完成的sch项注释掉（脚本每次执行都要检查所有sch项的抓取进度）
   - f. 如果怀疑某些.txt文件不完整，将其删除，再跑一遍脚本即可。
+  - g. 脚本跑完到终点时，会报告本次总共抓取批数，如果是0，而且前面也没有报告异常，应该是抓完了。
 '''
 
 def dmesg(m):
@@ -468,12 +469,15 @@ def write_to_log(task_label,start,batch_size,file_name):
 
 
 def run():
-    for i in range(len(config.sch)):
+    total_crawled_batch_count=0
+    sch_count=len(config.sch)
+    for i in range(sch_count):
+        sch_crawled_batch_count=0
         label=config.sch[i]['label']
         search_text=config.sch[i]['search_text']
         batch_size=config.file_save_batch_size
-        dmesg('\n==== 开始处理第 %s 批检索 [%s] ==== '%(i+1,label))
-        dmesg(search_text)
+        print('\n==== 开始处理第 %s/%s 批检索 [%s] ==== '%(i+1,sch_count,label))
+        print(search_text)
         rs_count=adv_search_and_go(search_text)
         if rs_count >= 100000:
             print '\n\n*********************************************'
@@ -514,10 +518,14 @@ def run():
                     status=False
                 if status:
                     crawl_fail_batchs=0
+                    sch_crawled_batch_count += 1
                     break
                 else:
                     dmesg('下载失败，重试，第 %s 次'%i)
             crawl_fail_batchs += int(status)
+        print '*** %s 抓取完成，计成功抓取 %s 批.txt文件 ***\n\n'%(label,sch_crawled_batch_count)
+        total_crawled_batch_count += sch_crawled_batch_count
+    print '\n***** run() 执行完成。 *****\n共计成功抓取 %s 批.txt文件'%total_crawled_batch_count
 
 
 
