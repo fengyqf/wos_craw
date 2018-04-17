@@ -21,5 +21,6 @@ sch.append({'label':'p1','search_text':
     })
 sch.append({'label':'p1','search_text':
     'PY=2016 AND (WC=CHEMISTRY MULTIDISCIPLINARY OR WC=BIOCHEMISTRY)'
+    ,'limit':5000
     })
 

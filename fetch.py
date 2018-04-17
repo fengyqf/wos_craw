@@ -28,6 +28,7 @@ import config
   - a. config.py 中设置 sch 变量，逐一设置每个wos检索项；
         每项要设置一个惟一的label，及wos高级检索条件search_text；
         每个检索条件，其结果应该控制 在10万条以内（wos限制），超过则直接忽略下载
+        可以通过配置项中增加 limit 参数，只导出前N条，见config.py.sample 中示例
   - b. 默认每批下载 file_save_batch_size 条
   - c. 下载后，txt文件将被自动改名，下载文件自动改名为 {label}_{起始条数}.txt
   - d. 下载时会检查是否有对应的.txt文件，如果已有，则自动跳过不再下载。因此label要惟一，不能重复
@@ -479,10 +480,11 @@ def run():
         print('\n==== 开始处理第 %s/%s 批检索 [%s] ==== '%(i+1,sch_count,label))
         print(search_text)
         rs_count=adv_search_and_go(search_text)
-        if rs_count >= 100000:
+        if rs_count > 100000 and not config.sch[i].has_key('limit'):
             print '\n\n*********************************************'
             print '*** [注意] 检索结果超过100000条，超出部分将无法下载 ***'
             print '*** 本项检索条件已被忽略，请修改规则后再运行脚本 ***'
+            print '*** 您可以在sci[i]中指定 limit 参数，以只导出前面部分 ***'
             print '第 %s 条检索条件，其label为 %s '%(i+1,config.sch[i]['label'])
             print '*********************************************\n\n'
             print ''
@@ -499,6 +501,8 @@ def run():
             print '*** 将跳过处理本项检索条件：第  %s 条，其label为 %s ***'%(i+1,config.sch[i]['label'])
             print '*********************************************\n\n'
             continue
+        if config.sch[i].has_key('limit'):
+            rs_count=min(rs_count,config.sch[i]['limit'])
         crawl_fail_batchs=0     #连续抓取失败的批次数
         for pos in range(1,rs_count, batch_size):
             if crawl_fail_batchs > config.crawl_fail_retry_limit:
