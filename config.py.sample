@@ -12,8 +12,12 @@ browser_profile_dir='/cygdrive/f/tempdown/wos/d59szdfe.default-1521437354332'
 file_save_dir='/cygdrive/f/tempdown/wos/save'
 file_save_batch_size=500
 
+# 页面已超过重试次数限制
 crawl_page_reload_retry=5
+# 连续抓取失败的批次数达到限制，将跳过，并进入下一组检索条件
 crawl_fail_retry_limit=10
+# 下载文件时僵死等待次数，超过则认为下载失败，将忽略进入下一批下载
+download_zombie_retry=15
 
 sch=[]
 sch.append({'label':'p1','search_text':

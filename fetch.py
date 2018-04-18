@@ -403,7 +403,7 @@ def wait_new_file(dir,snap,storage_name):
                 dmesg('临时文件读取失败，可能已下载完成')
                 sleep(1)
                 continue
-            if download_zombie > config.crawl_page_reload_retry:
+            if download_zombie > config.download_zombie_retry:
                 dmesg('**WARNING** 下载进度僵死过多次数，失败。 %s 次'%download_zombie)
                 return False
             elif f1_size==f1_last_size and f2_size==f2_last_size:
