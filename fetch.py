@@ -16,15 +16,17 @@ import config
 1. 运行环境：
   - a. 远程selenium 服务器，其地址为 browser_driver_command_executor 变量；其profiles 为 browser_profile_dir变量
   - b. selenium 服务器 只支持firefox，因为要使用 browser_profile；如不使用该项，应该也可以支持其他浏览器
+        （注意要使用中文版，wos自动适配语言的，而本脚本通过一些中文字符串定位页面元素）
   - c. 客户端（脚本运行机器）需要监测下载进度，所以把客户端的本地目录，映射为服务器上firefox下载目录，
-        （windows共享、虚拟机共享等都可以）
+        （即配置文件中的 file_save_dir；windows共享、虚拟机共享等都可以）
   - d. 手工将服务器端的firefox下载地址设置成上述地址、text文件不经询问直接保存到该目录，
   - e. 然后将其 profiles 目录复制到客户端上的browser_profile_dir目录，供firefox启动时加载。
-        （selemium服务器端浏览器默认不加载任何配置项，相当于新装firefox）
+        （selemium服务器端浏览器默认不加载任何配置项，相当于新装firefox，所以必须通过profiles使其生效）
   - f. 经过cygwin下通过测试，可正常运行. 服务端 windows 7, firefox 59, jdk8.161
+        （windows xp下seleium启动报错；客户端脚本或许能跑，鉴于当前cygwin已不再支持xp，所以不建议使用）
   - g. 脚本运行过程中，通常不要点击服务端的firefox，以避免DOM变更而导致脚本出错
 
-2. 特性
+2. 一些特性
   - a. config.py 中设置 sch 变量，逐一设置每个wos检索项；
         每项要设置一个惟一的label，及wos高级检索条件search_text；
         每个检索条件，其结果应该控制 在10万条以内（wos限制），超过则直接忽略下载
