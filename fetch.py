@@ -9,6 +9,9 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 
 import config
 
@@ -60,6 +63,7 @@ def init():
     profile=FirefoxProfile(profile_directory=profile_dir)
     dmesg('starting browser')
     driver = webdriver.Remote(command_executor=command_executor,desired_capabilities=DesiredCapabilities.FIREFOX,browser_profile=profile)
+    #driver = webdriver.Remote(command_executor=command_executor,desired_capabilities=DesiredCapabilities.FIREFOX)
     dmesg('打开 wos 页面，apps子域首页')
     try:
         driver.get('http://apps.webofknowledge.com/')
@@ -69,8 +73,8 @@ def init():
         try:
             driver.get('http://apps.webofknowledge.com/')
         except:
-            dmesg('打开失败，10s 后重试...')
-            sleep(10)
+            dmesg('打开失败，20s 后重试...')
+            sleep(20)
             driver.get('http://apps.webofknowledge.com/')
 
     if 'login.webofknowledge.com/error/Error' in driver.current_url:
@@ -204,25 +208,45 @@ def adv_search(search_text):
     ele=driver.find_element_by_xpath("//div[@class='logoBar']//a[contains(@href,'/home.do?')]")
     ele.click()
     sleep(1)
-    # 点选“Web of Scienct核心合集”进入高级检索页面
-    dmesg('展开数据库下拉列表')
-    ele=driver.find_element_by_xpath("//div[@class='dbselectdiv']//span[@class='select2-selection__arrow']")
-    ele.click()
-    sleep(0.3)
-    dmesg('点击wos核心合集切换')
-    ele=driver.find_element_by_xpath("//ul[@id='select2-databases-results'][@class='select2-results__options']/li[contains(text(),'Web of Science')]")
-    ele.click()
-    sleep(0.3)
+    cnt=0
+    while True:
+        cnt+=1
+        if cnt > 5:
+            dmesg('切换到WOS核心集尝试失败')
+        if '/WOS_' in driver.current_url:
+            dmesg('当前即是wos核心合集 WOS_...')
+            break
+        dmesg('尝试切换到WOS核心集，第%s次'%cnt)
+
+        # 点选“Web of Scienct核心合集”进入高级检索页面
+        dmesg('展开数据库下拉列表')
+        locator=(By.XPATH,"//div[@class='dbselectdiv']//span[@class='select2-selection__arrow']")
+        WebDriverWait(driver, 20, 0.5).until(EC.presence_of_element_located(locator))
+        ele=driver.find_element_by_xpath("//div[@class='dbselectdiv']//span[@class='select2-selection__arrow']")
+        ele.click()
+        sleep(1)
+        dmesg('点击wos核心合集切换')
+        locator=(By.XPATH,"//ul[@id='select2-databases-results'][@class='select2-results__options']/li[contains(text(),'Web of Science')]")
+        WebDriverWait(driver, 20, 0.5).until(EC.presence_of_element_located(locator))
+        ele=driver.find_element_by_xpath("//ul[@id='select2-databases-results'][@class='select2-results__options']/li[contains(text(),'Web of Science')]")
+        ele.click()
+        sleep(1)
 
     if '/WOS_AdvancedSearch_input.do?product=WOS&' in driver.current_url:
         dmesg('当前即是wos核心合集库的高级检索')
+    elif '/WOS_' not in driver.current_url:
+        dmesg('当前还没有进入WOS核心集，异常')
     else:
         dmesg('点tab上高级检索')
+        locator=(By.XPATH,"//ul[@class='searchtype-nav']//a[contains(@href,'WOS_AdvancedSearch_input.do?')]")
+        WebDriverWait(driver, 20, 0.5).until(EC.presence_of_element_located(locator))
         ele=driver.find_element_by_xpath("//ul[@class='searchtype-nav']//a[contains(@href,'WOS_AdvancedSearch_input.do?')]")
         ele.click()
         sleep(1)
     dmesg('高级检索页面输入条件:\n%s'%search_text)
-    ele=driver.find_element_by_xpath("//form[@id='WOS_AdvancedSearch_input_form']//div[@class='AdvSearchBox']//textarea[@id='value(input1)']")
+    locator=(By.XPATH,"//form[@id='WOS_AdvancedSearch_input_form']//div[@class='AdvSearchBox']/textarea[@id='value(input1)']")
+    WebDriverWait(driver, 20, 0.5).until(EC.presence_of_element_located(locator))
+    ele=driver.find_element_by_xpath("//form[@id='WOS_AdvancedSearch_input_form']//div[@class='AdvSearchBox']/textarea[@id='value(input1)']")
     ele.clear()
     ele.send_keys(search_text)
     ele=driver.find_element_by_xpath("//form[@id='WOS_AdvancedSearch_input_form']//div[@class='AdvSearchBox']//span[@id='searchButton']//button[@id='search-button']")
@@ -281,7 +305,9 @@ def crawl(start,end,label):
     times=0
     while True:
         times+=1
-        ele=driver.find_elements_by_xpath("//div[@class='page-options-inner']//span[@class='select2-selection__arrow']")
+        #ele=driver.find_elements_by_xpath("//div[@class='page-options-inner']//span[@class='select2-selection__arrow']")
+        #ele=driver.find_elements_by_xpath("//div[@id='summaryRecordsTable']//div[@class='recordMatchStatement']")
+        ele=driver.find_elements_by_xpath("//div[@id='summaryRecordsTable']//div[@class='displayTopBar']//span[@class='select2-selection__arrow']")
         if len(ele)==1:
             break
         if times > config.crawl_page_reload_retry:
@@ -292,10 +318,15 @@ def crawl(start,end,label):
             dmesg('summary.do页面加载不完整，第 %s 次，尝试翻页'%times)
             e[0].click()
             sleep(1)
+        elif random.randint(0,1) == 0:
+            dmesg('summary.do页面加载不完整，第 %s 次，随机尝试浏览历史退回'%times)
+            driver.back()
+            sleep(1)
         else:
             dmesg('summary.do页面加载不完整，第 %s 次，尝试重新加载'%times)
             driver.refresh()
             sleep(1)
+
     ele[0].click()
     sleep(1)
 
