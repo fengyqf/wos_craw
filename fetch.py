@@ -4,6 +4,7 @@
 import sys
 import os
 import base64
+import random
 from time import sleep
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -12,6 +13,7 @@ from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+import traceback
 
 import config
 
@@ -305,15 +307,18 @@ def crawl(start,end,label):
     times=0
     while True:
         times+=1
-        #ele=driver.find_elements_by_xpath("//div[@class='page-options-inner']//span[@class='select2-selection__arrow']")
-        #ele=driver.find_elements_by_xpath("//div[@id='summaryRecordsTable']//div[@class='recordMatchStatement']")
-        ele=driver.find_elements_by_xpath("//div[@id='summaryRecordsTable']//div[@class='displayTopBar']//span[@class='select2-selection__arrow']")
-        if len(ele)==1:
+        dmesg('等待导出按钮')
+        #locator=(By.XPATH,"//div[@class='l-content']//div[@class='export_options']//button[@id='exportTypeName'")
+        #WebDriverWait(driver, 20, 0.5).until(EC.presence_of_element_located(locator))
+        ele=driver.find_elements_by_xpath("//div[@class='l-content']//div[@class='export_options']//button[@id='exportTypeName']")
+        if len(ele)>=1:
+            #dmesg('找到导出按钮，导出按钮文本为: ')
+            #print ele[0].text
             break
         if times > config.crawl_page_reload_retry:
             dmesg('summary.do页面已超过重试次数限制，请手工检查是否可以正常访问')
             return False
-        e=driver.find_elements_by_xpath("//form[@id='summary_navigation']//a[not(contains(@class,'Disabled'))]")
+        e=driver.find_elements_by_xpath("//form[@id='summary_navigation'][@class='pagination']//a[not(contains(@class,'Disabled'))]")
         if len(e)>=1:
             dmesg('summary.do页面加载不完整，第 %s 次，尝试翻页'%times)
             e[0].click()
@@ -327,20 +332,33 @@ def crawl(start,end,label):
             driver.refresh()
             sleep(1)
 
-    ele[0].click()
-    sleep(1)
+        if len(ele)>0:
+            dmesg('有导出更多 button: exportMoreOptions')
+        else:
+            ele=driver.find_elements_by_xpath("//div[@class='l-content']//div[@class='export_options']//button[@id='exportTypeName']")
+            dmesg('非导出更多，使用 exportTypeName')
 
-    #点选 “保存为其他文件格式” u'\u4fdd\u5b58\u4e3a\u5176\u4ed6\u6587\u4ef6\u683c\u5f0f'
-    dmesg('点选 “保存为其他文件格式”')
-    ele=driver.find_elements_by_xpath("//span[contains(@class,'select2-container')]//ul[@id='select2-saveToMenu-results']//li")
-    et=[it.text for it in ele]
-    if u'\u4fdd\u5b58\u4e3a\u5176\u4ed6\u6587\u4ef6\u683c\u5f0f' not in et:
-        dmesg('找不到“保存为其他文件格式”')
-        return False
-    k=et.index(u'\u4fdd\u5b58\u4e3a\u5176\u4ed6\u6587\u4ef6\u683c\u5f0f')
-    ele[k].click()
-    sleep(1)
+    dmesg('检查导出按钮类型')
+    #找导出按钮，可能是 "导出..."，翻页后会是 "导出{上次导出选项}"（如：导出为其它文件格式）
+    #ele=driver.find_elements_by_xpath("//div[@class='l-content']//div[@class='export_options']//div[@id='exportTypeName'][contains(@class,'nav-link')]")
+    if 'nav-link' in ele[0].get_attribute('class'):
+        dmesg('当前导出按钮是下拉选单式按钮')
+        ele[0].click()
+        #点选 “保存为其他文件格式” u'\u4fdd\u5b58\u4e3a\u5176\u4ed6\u6587\u4ef6\u683c\u5f0f'
+        dmesg('点选 “其他文件格式”')
+        ele=driver.find_elements_by_xpath("//div[@class='l-content']//ul[@id='saveToMenu']/li")
+        et=[it.text for it in ele]
+        if u'\u5176\u4ed6\u6587\u4ef6\u683c\u5f0f' not in et:
+            dmesg('找不到“其他文件格式”')
+            return False
+        k=et.index(u'\u5176\u4ed6\u6587\u4ef6\u683c\u5f0f')
+        ele[k].click()
+        sleep(1)
+    else:
+        ele[0].click()
+        sleep(1)
 
+    
     dmesg('点选记录范围并输入')
     ele=driver.find_element_by_id("numberOfRecordsRange")
     ele.click()
@@ -394,6 +412,9 @@ def crawl(start,end,label):
     filename='%s_%s.txt'%(label,start)
     rtn=wait_new_file(config.file_save_dir,snap,filename)
     dmesg('等候下载wait_new_file()完成状态： %s '%rtn)
+
+    dmesg('本批处理完毕，稍后下载下一批... %ss'%config.batch_interval)
+    sleep(config.batch_interval)
 
     dmesg('点“取消”按钮关闭弹出层，并翻页')
     ele=driver.find_elements_by_class_name("quickoutput-cancel-action")
@@ -550,8 +571,10 @@ def run():
             for i in range(1,config.crawl_page_reload_retry+1):
                 try:
                     status=crawl(pos,pos_to,label)
-                except:
+                except Exception,err:
                     dmesg('crawl(..)处理失败')
+                    print err
+                    traceback.print_exc()
                     status=False
                 if status:
                     crawl_fail_batchs=0

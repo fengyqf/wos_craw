@@ -18,6 +18,8 @@ crawl_page_reload_retry=5
 crawl_fail_retry_limit=10
 # 下载文件时僵死等待次数，超过则认为下载失败，将忽略进入下一批下载
 download_zombie_retry=15
+# 下载一批后暂停时间秒数
+batch_interval=30
 
 sch=[]
 sch.append({'label':'p1','search_text':
